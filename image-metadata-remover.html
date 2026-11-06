@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>Image Metadata Remover — Remove AI Label &amp; EXIF, Keep Full Quality</title>
+<meta name="description" content="Remove AI-generated labels, EXIF, GPS and camera metadata from your images — 100% free, unlimited, right in your browser. Same resolution, visually identical quality — only the hidden metadata is reset." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Image Metadata Remover — Remove AI Label & EXIF" />
+<meta property="og:description" content="Strip AI labels, EXIF, GPS and camera data from images in your browser. Same resolution and quality — only metadata is removed. Free and unlimited." />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Image Metadata Remover" />
+<meta name="twitter:description" content="Remove AI-generated labels and all hidden metadata from images. Quality stays the same — only the label is reset." />
+<style>
+  :root{
+    --bg:#f4f6f8; --surface:#ffffff; --surface-2:#eef2f5; --line:#d7dee5;
+    --text:#12212e; --muted:#5b6b7a; --accent:#0e7a5f; --accent-dark:#0a5c48;
+    --accent-soft:#e2f2ec; --danger:#b3372c; --danger-soft:#fbeae7;
+    --warn:#8a5a12; --warn-soft:#fdf3dd; --radius:10px;
+    --shadow:0 1px 3px rgba(18,33,46,.08),0 8px 24px rgba(18,33,46,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d141b; --surface:#16212c; --surface-2:#1c2a38; --line:#2b3c4d;
+      --text:#e8eff5; --muted:#9db0c0; --accent:#2fbd97; --accent-dark:#25a581;
+      --accent-soft:#12362c; --danger:#e88a7d; --danger-soft:#3d211d;
+      --warn:#e3b45c; --warn-soft:#38300f;
+      --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55; font-size:16px;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:24px 18px 56px}
+  h1{font-size:clamp(28px,5.5vw,42px);line-height:1.15;margin:10px 0 10px;letter-spacing:-.02em;font-weight:800}
+  h2{font-size:21px;margin:0 0 8px;letter-spacing:-.01em}
+  p{margin:0 0 12px}
+  .lede{font-size:17px;color:var(--muted);max-width:640px}
+  .lede strong{color:var(--text)}
+  .pillrow{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 22px}
+  .pill{
+    font-size:13px;font-weight:600;background:var(--accent-soft);color:var(--accent-dark);
+    border:1px solid var(--line);border-radius:999px;padding:5px 12px;
+  }
+  @media (prefers-color-scheme: dark){ .pill{color:var(--accent)} }
+
+  /* Dropzone */
+  .dropzone{
+    background:var(--surface);border:2px dashed var(--line);border-radius:14px;
+    padding:38px 20px;text-align:center;cursor:pointer;box-shadow:var(--shadow);
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .dropzone:hover,.dropzone:focus-visible{border-color:var(--accent);outline:none}
+  .dropzone.dragging{border-color:var(--accent);background:var(--accent-soft)}
+  .dz-icon{width:52px;height:52px;margin:0 auto 12px;color:var(--accent)}
+  .dz-title{font-size:19px;font-weight:700;margin-bottom:4px}
+  .dz-sub{color:var(--muted);font-size:14px;margin:0}
+  .dz-btn{
+    display:inline-block;margin-top:16px;background:var(--accent);color:#fff;font-weight:700;
+    border:none;border-radius:8px;padding:11px 26px;font-size:15px;cursor:pointer;
+  }
+  .dz-btn:hover{background:var(--accent-dark)}
+  .privacy{font-size:13px;color:var(--muted);text-align:center;margin:12px 0 0}
+  input[type=file]{display:none}
+
+  /* Settings */
+  .settings{
+    display:flex;flex-wrap:wrap;gap:14px 28px;align-items:center;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 18px;margin-top:20px;box-shadow:var(--shadow);
+  }
+  .settings label{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .settings select{
+    font:inherit;font-size:14px;padding:6px 8px;border-radius:7px;
+    border:1px solid var(--line);background:var(--surface-2);color:var(--text);
+  }
+  .settings .hint{font-size:13px;color:var(--muted);width:100%;margin:0}
+
+  /* File list */
+  .toolbar{display:none;gap:10px;margin:24px 0 12px;flex-wrap:wrap}
+  .toolbar.show{display:flex}
+  .btn{
+    font:inherit;font-weight:700;font-size:14px;border-radius:8px;padding:10px 18px;cursor:pointer;
+    border:1px solid var(--line);background:var(--surface);color:var(--text);
+  }
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:var(--accent-dark)}
+  .btn:hover{border-color:var(--accent)}
+  .summary{font-size:14px;color:var(--muted);margin:0 0 12px;display:none}
+  .summary.show{display:block}
+
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:16px;margin-bottom:14px;
+  }
+  .card-top{display:flex;gap:14px;align-items:flex-start}
+  .thumb{width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex:none;background:var(--surface-2)}
+  .card-main{flex:1;min-width:0}
+  .fname{font-weight:700;font-size:15px;overflow-wrap:anywhere}
+  .fmeta{font-size:13px;color:var(--muted);margin-top:2px}
+  .status{font-size:13px;font-weight:700;margin-top:6px}
+  .status.working{color:var(--warn)}
+  .status.done{color:var(--accent)}
+  .status.error{color:var(--danger)}
+  .remove-x{
+    flex:none;background:none;border:none;color:var(--muted);font-size:20px;line-height:1;
+    cursor:pointer;padding:4px 6px;border-radius:6px;
+  }
+  .remove-x:hover{color:var(--danger)}
+
+  .found{
+    margin-top:12px;background:var(--warn-soft);border:1px solid var(--line);
+    border-radius:8px;padding:10px 12px;font-size:13px;
+  }
+  .found.none{background:var(--accent-soft)}
+  .found h4{margin:0 0 6px;font-size:13px}
+  .found ul{margin:0;padding-left:18px}
+  .found li{overflow-wrap:anywhere}
+  .found li b{font-weight:700}
+  .ai-flag{
+    display:inline-block;background:var(--danger);color:#fff;font-size:11px;font-weight:800;
+    border-radius:5px;padding:1px 7px;margin-left:6px;vertical-align:1px;letter-spacing:.03em;
+  }
+  .clean-note{margin-top:12px;background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px}
+  .card-actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center}
+  .dl-btn{
+    font:inherit;font-weight:700;font-size:14px;background:var(--accent);color:#fff;border:none;
+    border-radius:8px;padding:10px 20px;cursor:pointer;text-decoration:none;display:inline-block;
+  }
+  .dl-btn:hover{background:var(--accent-dark)}
+  .size-note{font-size:13px;color:var(--muted)}
+
+  /* Info sections */
+  section.info{margin-top:40px}
+  .grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
+  @media (min-width:640px){ .grid{grid-template-columns:1fr 1fr 1fr} }
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+  .tile h3{margin:0 0 6px;font-size:16px}
+  .tile p{font-size:14px;color:var(--muted);margin:0}
+  .tile .ic{color:var(--accent);margin-bottom:8px}
+  .steps{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-top:14px}
+  .steps ol{margin:6px 0 0;padding-left:22px}
+  .steps li{margin-bottom:6px}
+  details{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;margin-top:10px;box-shadow:var(--shadow);
+  }
+  summary{font-weight:700;cursor:pointer;font-size:15px}
+  details p{font-size:14px;color:var(--muted);margin:8px 0 0}
+  .honest{
+    background:var(--warn-soft);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;margin-top:26px;font-size:14px;
+  }
+  .honest h2{font-size:17px}
+  footer{margin-top:44px;border-top:1px solid var(--line);padding-top:18px;text-align:center}
+  footer .dev{font-weight:700}
+  footer p{font-size:13px;color:var(--muted);margin:2px 0}
+  .toast{
+    position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(80px);
+    background:var(--text);color:var(--bg);font-size:14px;font-weight:600;
+    padding:11px 20px;border-radius:9px;opacity:0;transition:all .25s ease;z-index:50;
+    max-width:calc(100vw - 32px);text-align:center;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Image Metadata Remover</h1>
+  <p class="lede">Remove the <strong>AI-generated label</strong>, EXIF, GPS location and camera data hidden inside your images — <strong>without spoiling the picture</strong>. The cleaned image keeps the same resolution and looks identical; only the metadata is reset.</p>
+
+  <div class="pillrow">
+    <span class="pill">AI label / C2PA removed</span>
+    <span class="pill">EXIF &amp; GPS removed</span>
+    <span class="pill">Same resolution &amp; dimensions</span>
+    <span class="pill">Free &amp; unlimited</span>
+    <span class="pill">100% private — runs in your browser</span>
+  </div>
+
+  <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Add images to clean">
+    <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="3"/>
+      <circle cx="9" cy="9" r="1.6"/>
+      <path d="M21 15.5 16 10.5 5 21"/>
+    </svg>
+    <div class="dz-title">Drop your images here</div>
+    <p class="dz-sub">JPG, PNG or WebP — add as many as you like, no limit</p>
+    <button class="dz-btn" type="button" id="browseBtn">Choose images</button>
+  </div>
+  <p class="privacy">Your images never leave this device. Cleaning happens locally in your browser — nothing is uploaded to any server.</p>
+  <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple />
+
+  <div class="settings">
+    <label>Output format
+      <select id="formatSel">
+        <option value="same" selected>Same as original</option>
+        <option value="image/png">PNG (lossless)</option>
+        <option value="image/jpeg">JPG</option>
+        <option value="image/webp">WebP</option>
+      </select>
+    </label>
+    <label>JPG / WebP quality
+      <select id="qualitySel">
+        <option value="1" selected>100% — maximum</option>
+        <option value="0.95">95% — near-identical, smaller file</option>
+        <option value="0.92">92%</option>
+      </select>
+    </label>
+    <p class="hint">PNG output is always lossless. JPG and WebP are re-encoded at the quality you pick — at 100% the picture is visually identical to the original.</p>
+  </div>
+
+  <div class="toolbar" id="toolbar">
+    <button class="btn primary" type="button" id="downloadAllBtn">Download all cleaned</button>
+    <button class="btn" type="button" id="shareAllBtn" style="display:none">Save all via Share</button>
+    <button class="btn" type="button" id="clearBtn">Clear list</button>
+  </div>
+  <p class="summary" id="summary"></p>
+  <div id="list"></div>
+
+  <section class="info">
+    <h2>What gets removed</h2>
+    <div class="grid">
+      <div class="tile">
+        <svg class="ic" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+        <h3>AI-generated label</h3>
+        <p>The “AI generated” tag that tools like ChatGPT, DALL·E, Firefly and Gemini write into a file — including C2PA / Content Credentials and XMP labels — is wiped, so the image no longer carries the AI flag.</p>
+      </div>
+      <div class="tile">
+        <svg class="ic" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+        <h3>Location &amp; camera data</h3>
+        <p>GPS coordinates, camera and phone model, lens info, date and time, and the software name stored in EXIF are all stripped before you share an image anywhere.</p>
+      </div>
+      <div class="tile">
+        <svg class="ic" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="M21 15.5 16 10.5 5 21"/></svg>
+        <h3>Quality is protected</h3>
+        <p>Only the data blocks around the picture are dropped. The cleaned image keeps the same width and height — PNG output is fully lossless, and JPG/WebP are saved at 100% quality, so side by side you cannot tell them apart.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="info">
+    <h2>How it works</h2>
+    <div class="steps">
+      <ol>
+        <li><strong>Add an image</strong> — the tool first scans it and shows you exactly what hidden metadata it found, including any AI label.</li>
+        <li><strong>It rebuilds the file from pixels only</strong> — the image is redrawn and saved fresh, so no EXIF, XMP, IPTC, GPS or C2PA block is carried over.</li>
+        <li><strong>Download the clean copy</strong> — same picture, same quality, no label. The original file on your device is never changed.</li>
+      </ol>
+    </div>
+  </section>
+
+  <div class="honest">
+    <h2>One honest note</h2>
+    <p style="margin:0">This tool removes metadata stored <em>in the file</em> — AI labels, C2PA credentials, EXIF, GPS and software tags. Some AI services also hide an invisible watermark <em>inside the pixels themselves</em> (for example Google’s SynthID). That kind of watermark is part of the picture, not metadata, so no metadata remover can take it out — and any site claiming otherwise is not telling the truth. Removing metadata also does not change who owns an image or its copyright; use cleaned images responsibly.</p>
+  </div>
+
+  <section class="info">
+    <h2>Common questions</h2>
+    <details>
+      <summary>Will my image quality drop?</summary>
+      <p>No visible drop. PNG output is fully lossless. For JPG and WebP the default quality is 100%, and the resolution never changes — the tool shows the cleaned file’s dimensions next to the original so you can check.</p>
+    </details>
+    <details>
+      <summary>Does it remove the “AI generated” label from ChatGPT / DALL·E images?</summary>
+      <p>Yes — the label those tools store in the file (C2PA Content Credentials and XMP metadata) is removed. The scan result on each image shows whether an AI label was found before cleaning. Invisible pixel watermarks, where a service uses them, are separate from the file label — see the honest note above.</p>
+    </details>
+    <details>
+      <summary>Are my images uploaded anywhere?</summary>
+      <p>No. Everything runs in your browser on your own device. You can even disconnect from the internet after the page loads and it will still work.</p>
+    </details>
+    <details>
+      <summary>Is there a limit?</summary>
+      <p>No limit — clean as many images as you want, free. Very large photos are handled by your device, so an older phone may take a few seconds on huge files.</p>
+    </details>
+    <details>
+      <summary>Which formats are supported?</summary>
+      <p>JPG, PNG and WebP — the formats AI image tools and cameras normally produce. The cleaned file keeps the same format unless you choose a different output format above.</p>
+    </details>
+    <details>
+      <summary>I tap Download but nothing happens — what can I do?</summary>
+      <p>Some in-app browsers block direct file downloads, so the tap appears to do nothing. On the cleaned image, tap <strong>Save via Share</strong> instead — your phone’s share sheet lets you save the image to Files, Photos or Drive. Opening this page directly in Chrome or Safari also makes the Download button work normally.</p>
+    </details>
+  </section>
+
+  <footer>
+    <p class="dev">Website Development</p>
+    <p>Md Sariful Islam</p>
+    <p>Diploma in Computer Engineer</p>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+  "use strict";
+  var dropzone = document.getElementById('dropzone');
+  var browseBtn = document.getElementById('browseBtn');
+  var fileInput = document.getElementById('fileInput');
+  var listEl = document.getElementById('list');
+  var toolbar = document.getElementById('toolbar');
+  var summaryEl = document.getElementById('summary');
+  var formatSel = document.getElementById('formatSel');
+  var qualitySel = document.getElementById('qualitySel');
+  var toastEl = document.getElementById('toast');
+  var items = []; // {id, file, name, origURL, cleanBlob, cleanURL, cleanName, status}
+  var nextId = 1;
+
+  // Some in-app browsers silently block blob: downloads. Where the Web Share
+  // API can hand over files, offer it as a second way to save to the device.
+  var shareOK = false;
+  try {
+    shareOK = !!(navigator.share && navigator.canShare &&
+      navigator.canShare({ files: [new File([new Blob(['x'], {type:'image/png'})], 'x.png', {type:'image/png'})] }));
+  } catch (e) { shareOK = false; }
+
+  function triggerDownload(item){
+    if (!item.cleanBlob) return;
+    var url = URL.createObjectURL(item.cleanBlob); // fresh URL for every tap
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = item.cleanName;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){
+      a.remove();
+      URL.revokeObjectURL(url);
+    }, 4000);
+    toast(shareOK
+      ? 'Download started for ' + item.cleanName + ' — if nothing arrives, tap “Save via Share”.'
+      : 'Download started for ' + item.cleanName + ' — check your downloads.');
+  }
+  function shareItem(item){
+    if (!item.cleanBlob) return Promise.resolve(false);
+    var file;
+    try { file = new File([item.cleanBlob], item.cleanName, { type: item.cleanBlob.type }); }
+    catch (e) { return Promise.resolve(false); }
+    if (!(navigator.canShare && navigator.canShare({ files: [file] }))) return Promise.resolve(false);
+    return navigator.share({ files: [file], title: item.cleanName }).then(function(){ return true; });
+  }
+  function shareFiles(list){
+    var files = [];
+    try {
+      list.forEach(function(item){ files.push(new File([item.cleanBlob], item.cleanName, { type: item.cleanBlob.type })); });
+    } catch (e) { toast('Sharing is not available on this device — use Download instead.'); return; }
+    if (!(navigator.canShare && navigator.canShare({ files: files }))){
+      toast('Sharing is not available on this device — use Download instead.');
+      return;
+    }
+    navigator.share({ files: files, title: 'Cleaned images' }).catch(function(err){
+      if (err && err.name !== 'AbortError') toast('Sharing was not available — use Download instead.');
+    });
+  }
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ toastEl.classList.remove('show'); }, 2600);
+  }
+  function fmtSize(bytes){
+    if (bytes == null) return '—';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/(1024*1024)).toFixed(2) + ' MB';
+  }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* ---------- metadata scan (reading the original file only) ---------- */
+  var AI_HINTS = ['c2pa','content credentials','contentcredentials','adobe firefly','firefly',
+    'dall','openai','chatgpt','midjourney','stable diffusion','automatic1111','comfyui',
+    'imagen','gemini','google ai','synthid','ai generated','ai-generated','generated by ai',
+    'dreamstudio','leonardo','ideogram','bing image creator','microsoft designer','gencraft','flux'];
+
+  function u16be(b,o){ return (b[o]<<8)|b[o+1]; }
+  function u32be(b,o){ return ((b[o]<<24)|(b[o+1]<<16)|(b[o+2]<<8)|b[o+3])>>>0; }
+  function bytesToText(b, start, len){
+    var s = '';
+    var end = Math.min(b.length, start+len);
+    for (var i=start;i<end;i++){ var c=b[i]; s += (c>=32 && c<127) ? String.fromCharCode(c) : ' '; }
+    return s;
+  }
+  // extract printable ASCII runs (catches XMP / IPTC / PNG text chunks)
+  function asciiRuns(b){
+    var runs = [], cur = '';
+    for (var i=0;i<b.length;i++){
+      var c = b[i];
+      if (c>=32 && c<127){ cur += String.fromCharCode(c); if (cur.length>4000){ runs.push(cur); cur=''; } }
+      else { if (cur.length>=4) runs.push(cur); cur=''; }
+    }
+    if (cur.length>=4) runs.push(cur);
+    return runs.join('\n');
+  }
+  function findAI(text){
+    var low = text.toLowerCase(), hits = [];
+    for (var i=0;i<AI_HINTS.length;i++){
+      if (low.indexOf(AI_HINTS[i]) !== -1) hits.push(AI_HINTS[i]);
+    }
+    return hits;
+  }
+  function grab(text, re){
+    var m = text.match(re);
+    return m ? m[1].trim().slice(0,120) : null;
+  }
+
+  function scanJPEG(b){
+    var found = [];
+    if (!(b[0]===0xFF && b[1]===0xD8)) return found;
+    var off = 2;
+    while (off + 4 <= b.length){
+      if (b[off] !== 0xFF) break;
+      var marker = b[off+1];
+      if (marker === 0xDA) break; // start of scan — image data begins
+      var len = u16be(b, off+2);
+      if (len < 2) break;
+      var segStart = off+4, segLen = len-2;
+      if (marker === 0xE1){
+        var head = bytesToText(b, segStart, Math.min(29, segLen));
+        if (head.indexOf('Exif') === 0) found.push({label:'EXIF data block', value:'camera, date & settings data present', ai:false});
+        else if (head.indexOf('http://ns.adobe.com/xap/1.0/') === 0){
+          var xmp = bytesToText(b, segStart, segLen);
+          found.push({label:'XMP metadata block', value:'labels & edit history present', ai: findAI(xmp).length>0});
+        } else {
+          var other = bytesToText(b, segStart, Math.min(segLen, 4000));
+          if (findAI(other).length) found.push({label:'AI / C2PA data block', value:'AI or Content Credentials data present', ai:true});
+        }
+      }
+      if (marker === 0xED) found.push({label:'IPTC data block', value:'caption / credit data present', ai:false});
+      if (marker === 0xFE){
+        var comment = bytesToText(b, segStart, segLen).trim();
+        if (comment) found.push({label:'Comment', value:comment, ai: findAI(comment).length>0});
+      }
+      off += 2 + len;
+    }
+    return found;
+  }
+  function scanPNG(b){
+    var found = [];
+    var sig = [0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A];
+    for (var i=0;i<8;i++) if (b[i]!==sig[i]) return found;
+    var off = 8;
+    while (off + 12 <= b.length){
+      var len = u32be(b, off);
+      var type = bytesToText(b, off+4, 4);
+      var dataStart = off+8;
+      if (type==='tEXt' || type==='iTXt' || type==='zTXt'){
+        var raw = bytesToText(b, dataStart, Math.min(len, 6000));
+        var key = raw.split(' ')[0].replace(/[^A-Za-z0-9 _-]/g,'').slice(0,40) || 'text';
+        var val = raw.slice(key.length).replace(/^\s+/,'').slice(0,140);
+        found.push({label:'PNG text chunk ('+key+')', value: val || 'embedded text data', ai: findAI(raw).length>0});
+      }
+      if (type==='eXIf') found.push({label:'EXIF data block', value:'camera, date & settings data present', ai:false});
+      if (type==='iCCP') found.push({label:'Embedded colour profile (ICC)', value:'', ai:false});
+      if (type==='tIME') found.push({label:'Last-modified time chunk', value:'', ai:false});
+      if (type==='IDAT' || type==='IEND') break;
+      off += 12 + len;
+    }
+    return found;
+  }
+  function scanWebP(b){
+    var found = [];
+    if (bytesToText(b,0,4)!=='RIFF' || bytesToText(b,8,4)!=='WEBP') return found;
+    var off = 12;
+    while (off + 8 <= b.length){
+      var type = bytesToText(b, off, 4);
+      var len = b[off+4] | (b[off+5]<<8) | (b[off+6]<<16) | (b[off+7]<<24); // WebP chunk size is little-endian
+      if (type==='EXIF') found.push({label:'EXIF data block', value:'camera, date & settings data present', ai:false});
+      if (type==='XMP ') found.push({label:'XMP metadata block', value:'labels & edit history present', ai:false});
+      if (type==='ICCP') found.push({label:'Embedded colour profile (ICC)', value:'', ai:false});
+      off += 8 + len + (len % 2);
+    }
+    return found;
+  }
+
+  function scanFile(file){
+    return file.arrayBuffer().then(function(buf){
+      var b = new Uint8Array(buf);
+      var found = [];
+      if (file.type === 'image/jpeg') found = scanJPEG(b);
+      else if (file.type === 'image/png') found = scanPNG(b);
+      else if (file.type === 'image/webp') found = scanWebP(b);
+
+      var text = asciiRuns(b);
+      // Named fields people recognise
+      var sw = grab(text, /Software[:\s=]+([ -~]{2,60})/i) || grab(text, /<tiff:Software>([^<]{2,80})</i) || grab(text, /"Software"\s*:\s*"([^"]{2,80})"/);
+      var make = grab(text, /<tiff:Make>([^<]{2,60})</i);
+      var model = grab(text, /<tiff:Model>([^<]{2,60})</i);
+      var desc = grab(text, /<dc:description>[\s\S]{0,60}?<rdf:li[^>]*>([^<]{2,120})</i) || grab(text, /ImageDescription[:\s=]+([ -~]{2,100})/i);
+      var params = grab(text, /parameters[:\s]+([ -~]{4,160})/i);
+      var gps = /GPSLatitude|GPSLongitude|gps/i.test(text) && /GPS/.test(text);
+      if (sw) found.push({label:'Software', value:sw, ai: findAI(sw).length>0});
+      if (make || model) found.push({label:'Camera / device', value:[make,model].filter(Boolean).join(' '), ai:false});
+      if (desc) found.push({label:'Description', value:desc, ai: findAI(desc).length>0});
+      if (params) found.push({label:'AI generation parameters', value:params, ai:true});
+      if (gps) found.push({label:'GPS location data', value:'coordinates embedded in file', ai:false});
+
+      var aiHits = findAI(text);
+      var hasAILabel = aiHits.length>0 || found.some(function(f){return f.ai;});
+      if (hasAILabel && !found.some(function(f){return f.ai;})){
+        found.push({label:'AI label data', value:'AI-related metadata text found in file', ai:true});
+      }
+      // de-duplicate labels
+      var seen = {}, out = [];
+      found.forEach(function(f){ var k=f.label+'|'+f.value; if(!seen[k]){ seen[k]=1; out.push(f);} });
+      return { found: out.slice(0,10), ai: hasAILabel };
+    }).catch(function(){ return { found: [], ai:false }; });
+  }
+
+  /* ---------- cleaning (pixels-only rebuild) ---------- */
+  function loadImage(url){
+    return new Promise(function(res, rej){
+      var img = new Image();
+      img.onload = function(){ res(img); };
+      img.onerror = rej;
+      img.src = url;
+    });
+  }
+  function canvasBlob(canvas, type, q){
+    return new Promise(function(res){ canvas.toBlob(res, type, q); });
+  }
+  function cleanImage(item){
+    return loadImage(item.origURL).then(function(img){
+      item.width = img.naturalWidth; item.height = img.naturalHeight;
+      var canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      var ctx = canvas.getContext('2d');
+      // JPG has no transparency: fill white so transparent PNG->JPG doesn't go black
+      var outType = formatSel.value === 'same' ? item.file.type : formatSel.value;
+      if (outType === 'image/jpeg'){
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      }
+      ctx.drawImage(img, 0, 0);
+      var q = parseFloat(qualitySel.value);
+      return canvasBlob(canvas, outType, q).then(function(blob){
+        if (!blob) throw new Error('encode failed');
+        item.cleanBlob = blob;
+        var ext = outType==='image/png' ? '.png' : outType==='image/webp' ? '.webp' : '.jpg';
+        item.cleanName = item.name.replace(/\.[^.]+$/, '') + '-clean' + ext;
+        item.cleanURL = URL.createObjectURL(blob);
+        item.status = 'done';
+      });
+    });
+  }
+
+  /* ---------- UI ---------- */
+  function renderItem(item){
+    var el = document.getElementById('card-' + item.id);
+    if (!el){
+      el = document.createElement('div');
+      el.className = 'card'; el.id = 'card-' + item.id;
+      listEl.appendChild(el);
+    }
+    var html = '';
+    html += '<div class="card-top">';
+    html += '<img class="thumb" src="' + item.origURL + '" alt="Preview of ' + esc(item.name) + '" />';
+    html += '<div class="card-main">';
+    html += '<div class="fname">' + esc(item.name) + '</div>';
+    html += '<div class="fmeta">' + esc(item.file.type.replace('image/','').toUpperCase()) + ' · ' + fmtSize(item.file.size) +
+            (item.width ? ' · ' + item.width + ' × ' + item.height + ' px' : '') + '</div>';
+    if (item.status === 'working') html += '<div class="status working">Scanning &amp; cleaning…</div>';
+    if (item.status === 'error') html += '<div class="status error">Could not process this file. It may be corrupted or an unsupported format.</div>';
+    if (item.status === 'done') html += '<div class="status done">Cleaned — all metadata removed</div>';
+    html += '</div>';
+    html += '<button class="remove-x" type="button" data-remove="' + item.id + '" aria-label="Remove ' + esc(item.name) + ' from list">×</button>';
+    html += '</div>';
+
+    if (item.scan){
+      if (item.scan.found.length){
+        html += '<div class="found"><h4>Metadata found in the original' + (item.scan.ai ? '<span class="ai-flag">AI LABEL FOUND</span>' : '') + '</h4><ul>';
+        item.scan.found.forEach(function(f){
+          html += '<li><b>' + esc(f.label) + '</b>' + (f.value ? ': ' + esc(f.value) : '') + (f.ai ? '<span class="ai-flag">AI</span>' : '') + '</li>';
+        });
+        html += '</ul></div>';
+      } else {
+        html += '<div class="found none"><h4>No metadata found in the original — it was already clean. A fresh copy was still made below.</h4></div>';
+      }
+    }
+    if (item.status === 'done'){
+      html += '<div class="clean-note">Cleaned file: <b>' + esc(item.cleanName) + '</b> · ' + fmtSize(item.cleanBlob.size) + ' · ' + item.width + ' × ' + item.height + ' px — same dimensions as the original, with zero metadata blocks.</div>';
+      html += '<div class="card-actions"><button class="dl-btn" type="button" data-dl="' + item.id + '">Download cleaned image</button>' +
+              (shareOK ? '<button class="btn" type="button" data-share="' + item.id + '">Save via Share</button>' : '') +
+              '<span class="size-note">Original ' + fmtSize(item.file.size) + ' → Cleaned ' + fmtSize(item.cleanBlob.size) + '</span></div>';
+    }
+    el.innerHTML = html;
+  }
+
+  var shareAllBtn = document.getElementById('shareAllBtn');
+  function refreshToolbar(){
+    var done = items.filter(function(i){ return i.status==='done'; });
+    toolbar.classList.toggle('show', done.length > 0);
+    shareAllBtn.style.display = (shareOK && done.length > 0) ? '' : 'none';
+    if (items.length){
+      summaryEl.classList.add('show');
+      summaryEl.textContent = items.length + (items.length===1?' image':' images') + ' added · ' + done.length + ' cleaned';
+    } else {
+      summaryEl.classList.remove('show');
+      summaryEl.textContent = '';
+    }
+  }
+
+  function processItem(item){
+    renderItem(item); refreshToolbar();
+    scanFile(item.file).then(function(scan){
+      item.scan = scan;
+      return cleanImage(item);
+    }).then(function(){
+      renderItem(item); refreshToolbar();
+    }).catch(function(){
+      item.status = 'error';
+      renderItem(item); refreshToolbar();
+    });
+  }
+
+  function addFiles(fileList){
+    var added = 0;
+    Array.prototype.forEach.call(fileList, function(file){
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)){
+        toast('Skipped "' + file.name + '" — only JPG, PNG and WebP are supported.');
+        return;
+      }
+      var item = {
+        id: nextId++, file: file, name: file.name,
+        origURL: URL.createObjectURL(file),
+        cleanBlob: null, cleanURL: null, cleanName: null,
+        status: 'working', scan: null, width: 0, height: 0
+      };
+      items.push(item); added++;
+      processItem(item);
+    });
+    if (added) toast(added + (added===1?' image':' images') + ' added — cleaning now…');
+  }
+
+  dropzone.addEventListener('click', function(){ fileInput.click(); });
+  browseBtn.addEventListener('click', function(e){ e.stopPropagation(); fileInput.click(); });
+  dropzone.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fileInput.click(); }
+  });
+  fileInput.addEventListener('change', function(){
+    addFiles(fileInput.files);
+    fileInput.value = '';
+  });
+  ['dragenter','dragover'].forEach(function(ev){
+    dropzone.addEventListener(ev, function(e){ e.preventDefault(); dropzone.classList.add('dragging'); });
+  });
+  ['dragleave','drop'].forEach(function(ev){
+    dropzone.addEventListener(ev, function(e){ e.preventDefault(); dropzone.classList.remove('dragging'); });
+  });
+  dropzone.addEventListener('drop', function(e){
+    if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+  });
+  document.addEventListener('paste', function(e){
+    if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length) addFiles(e.clipboardData.files);
+  });
+
+  // Re-clean everything if output settings change
+  function reclean(){
+    items.forEach(function(item){
+      if (item.cleanURL) URL.revokeObjectURL(item.cleanURL);
+      item.cleanBlob = null; item.cleanURL = null; item.status = 'working';
+      renderItem(item);
+      cleanImage(item).then(function(){ renderItem(item); refreshToolbar(); })
+      .catch(function(){ item.status='error'; renderItem(item); refreshToolbar(); });
+    });
+    refreshToolbar();
+  }
+  formatSel.addEventListener('change', reclean);
+  qualitySel.addEventListener('change', reclean);
+
+  listEl.addEventListener('click', function(e){
+    if (!e.target.closest) return;
+    var dlBtn = e.target.closest('[data-dl]');
+    if (dlBtn){
+      var dlId = parseInt(dlBtn.getAttribute('data-dl'), 10);
+      items.forEach(function(item){ if (item.id === dlId) triggerDownload(item); });
+      return;
+    }
+    var shBtn = e.target.closest('[data-share]');
+    if (shBtn){
+      var shId = parseInt(shBtn.getAttribute('data-share'), 10);
+      items.forEach(function(item){
+        if (item.id === shId){
+          shareItem(item).then(function(ok){
+            if (!ok) { toast('Sharing is not available here — downloading instead.'); triggerDownload(item); }
+          }).catch(function(err){
+            if (err && err.name !== 'AbortError'){ toast('Sharing was not available — downloading instead.'); triggerDownload(item); }
+          });
+        }
+      });
+      return;
+    }
+    var btn = e.target.closest('[data-remove]');
+    if (!btn) return;
+    var id = parseInt(btn.getAttribute('data-remove'), 10);
+    items = items.filter(function(item){
+      if (item.id === id){
+        URL.revokeObjectURL(item.origURL);
+        if (item.cleanURL) URL.revokeObjectURL(item.cleanURL);
+        var el = document.getElementById('card-' + id);
+        if (el) el.remove();
+        return false;
+      }
+      return true;
+    });
+    refreshToolbar();
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    items.forEach(function(item){
+      URL.revokeObjectURL(item.origURL);
+      if (item.cleanURL) URL.revokeObjectURL(item.cleanURL);
+    });
+    items = []; listEl.innerHTML = ''; refreshToolbar();
+  });
+
+  document.getElementById('downloadAllBtn').addEventListener('click', function(){
+    var done = items.filter(function(i){ return i.status==='done'; });
+    done.forEach(function(item, idx){
+      setTimeout(function(){ triggerDownload(item); }, idx * 600);
+    });
+    if (!done.length) return;
+    if (done.length === 1) return; // triggerDownload already toasted
+    toast('Downloading ' + done.length + ' cleaned images…' +
+      (shareOK ? ' If some do not arrive, use “Save all via Share”.' : ''));
+  });
+
+  shareAllBtn.addEventListener('click', function(){
+    var done = items.filter(function(i){ return i.status==='done'; });
+    if (done.length) shareFiles(done);
+  });
+})();
+</script>
+</body>
+</html>
